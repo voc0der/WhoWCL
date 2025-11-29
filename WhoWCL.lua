@@ -22,17 +22,14 @@ local function buildWclUrl(name, realm)
     )
 end
 
+local lastQuery = nil
+
+-- Create frame for events
 local frame = CreateFrame("Frame")
 
 frame:SetScript("OnEvent", function(self, event, ...)
     if event == "PLAYER_LOGIN" then
-        -- Make sure /who results are sent to the UI so WHO_LIST_UPDATE actually fires
-        if SetWhoToUI then
-            SetWhoToUI(true)
-            Print("loaded. Realm = " .. PLAYER_REALM .. " (SetWhoToUI(true))")
-        else
-            Print("loaded. Realm = " .. PLAYER_REALM .. " (SetWhoToUI not available)")
-        end
+        Print("loaded. Realm = " .. PLAYER_REALM)
         return
     end
 
@@ -40,7 +37,7 @@ frame:SetScript("OnEvent", function(self, event, ...)
         return
     end
 
-    -- Try both APIs depending on client
+    -- Use classic-style who APIs
     local numResults
     if C_FriendList and C_FriendList.GetNumWhoResults then
         numResults = C_FriendList.GetNumWhoResults()
@@ -51,10 +48,11 @@ frame:SetScript("OnEvent", function(self, event, ...)
         return
     end
 
-    Print("WHO_LIST_UPDATE fired, numResults = " .. tostring(numResults))
+    Print("WHO_LIST_UPDATE fired, numResults = " .. tostring(numResults) ..
+          (lastQuery and (" (query: \"" .. lastQuery .. "\")") or ""))
 
-    -- Only act when there is exactly one match
     if numResults ~= 1 then
+        -- We only act when there's exactly 1 result to avoid spam/ambiguity
         return
     end
 
@@ -67,9 +65,11 @@ frame:SetScript("OnEvent", function(self, event, ...)
             return
         end
         name = info.fullName or info.name
-        realm = PLAYER_REALM    -- /who is realm-local in Classic
+        realm = PLAYER_REALM
     elseif GetWhoInfo then
-        name = GetWhoInfo(1)    -- Old-style API returns name as first value
+        -- Classic GetWhoInfo signature: name, guild, level, race, class, zone, classFileName, sex
+        local n = GetWhoInfo(1)
+        name = n
         realm = PLAYER_REALM
     end
 
@@ -84,3 +84,24 @@ end)
 
 frame:RegisterEvent("PLAYER_LOGIN")
 frame:RegisterEvent("WHO_LIST_UPDATE")
+
+-- Slash command: /wclwho name
+SLASH_WCLWHO1 = "/wclwho"
+SlashCmdList["WCLWHO"] = function(msg)
+    msg = msg and msg:match("^%s*(.-)%s*$") or ""
+    if msg == "" then
+        Print("Usage: /wclwho Name  (make it specific enough to return 1 result)")
+        return
+    end
+
+    lastQuery = msg
+    Print("Sending who query for: \"" .. msg .. "\"")
+
+    if C_FriendList and C_FriendList.SendWho then
+        C_FriendList.SendWho(msg)
+    elseif SendWho then
+        SendWho(msg)
+    else
+        Print("No SendWho API available on this client.")
+    end
+end
