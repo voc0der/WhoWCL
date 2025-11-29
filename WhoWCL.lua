@@ -26,7 +26,13 @@ local frame = CreateFrame("Frame")
 
 frame:SetScript("OnEvent", function(self, event, ...)
     if event == "PLAYER_LOGIN" then
-        Print("loaded. Realm = " .. PLAYER_REALM)
+        -- Make sure /who results are sent to the UI so WHO_LIST_UPDATE actually fires
+        if SetWhoToUI then
+            SetWhoToUI(true)
+            Print("loaded. Realm = " .. PLAYER_REALM .. " (SetWhoToUI(true))")
+        else
+            Print("loaded. Realm = " .. PLAYER_REALM .. " (SetWhoToUI not available)")
+        end
         return
     end
 
@@ -47,7 +53,7 @@ frame:SetScript("OnEvent", function(self, event, ...)
 
     Print("WHO_LIST_UPDATE fired, numResults = " .. tostring(numResults))
 
-    -- To avoid spam, only do anything when there is exactly one match
+    -- Only act when there is exactly one match
     if numResults ~= 1 then
         return
     end
@@ -61,10 +67,9 @@ frame:SetScript("OnEvent", function(self, event, ...)
             return
         end
         name = info.fullName or info.name
-        realm = PLAYER_REALM  -- /who is realm-local in classic style
+        realm = PLAYER_REALM    -- /who is realm-local in Classic
     elseif GetWhoInfo then
-        -- Old-style API
-        name = GetWhoInfo(1)
+        name = GetWhoInfo(1)    -- Old-style API returns name as first value
         realm = PLAYER_REALM
     end
 
