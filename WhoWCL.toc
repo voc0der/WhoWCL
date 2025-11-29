@@ -1,0 +1,7 @@
+## Interface: 11500
+## Title: WhoWCL
+## Notes: Adds a Warcraft Logs character URL when /who returns exactly one result.
+## Author: vocoder
+## Version: 1.0
+
+WhoWCL.lua
